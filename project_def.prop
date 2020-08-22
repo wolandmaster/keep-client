@@ -1,0 +1,18 @@
+APPNAME = keepclient
+
+type = app
+profile = wearable-2.3.1
+
+USER_SRCS = \
+    src/keepclient.c \
+    src/base64.c \
+    src/https.c \
+    src/gpsoauth.c \
+    src/gkeep.c \
+    src/view/main_view.c \
+    src/event_handler/main_event_handler.c
+USER_DEFS =
+USER_INC_DIRS = inc
+USER_OBJS =
+USER_LIBS = crypto ssl
+USER_EDCS =

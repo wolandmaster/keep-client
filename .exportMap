@@ -1,0 +1,4 @@
+{
+	global: main; _IO_*;
+	local: *;
+};
