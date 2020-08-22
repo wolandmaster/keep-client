@@ -3,6 +3,8 @@ Google Keep client for Samsung Gear Fit 2 (Pro)
 
 *This application is not supported nor endorsed by Google!*
 
+<img src="https://github.com/wolandmaster/keep-client/raw/master/images/screenshot-1.jpg" width="108" height="216"/>
+
 ## Install instructions
 
 ### Download & Install Tizen Studio with CLI installer
