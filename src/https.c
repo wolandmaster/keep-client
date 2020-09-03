@@ -15,23 +15,29 @@
 #include "keepclient.h"
 #include "https.h"
 
-static connection_h connection;
+#ifndef EMULATOR
+static connection_h connection = NULL;
+#endif // EMULATOR
 static char hex[] = "0123456789ABCDEF";
 
 void http_initialize() {
+#ifndef EMULATOR
   int err;
   if (CONNECTION_ERROR_NONE != (err = connection_create(&connection))) {
     dlog_print(DLOG_ERROR, LOG_TAG, "[connection_create] failed (%d): %s", err, get_error_message(err));
     return;
   }
+#endif // EMULATOR
 }
 
 void http_terminate() {
+#ifndef EMULATOR
   int err;
   if (CONNECTION_ERROR_NONE != (err = connection_destroy(connection))) {
     dlog_print(DLOG_ERROR, LOG_TAG, "[connection_destroy] failed (%d): %s", err, get_error_message(err));
   }
   connection = NULL;
+#endif // EMULATOR
 }
 
 const char *http_error_message(http_error error) {
@@ -161,6 +167,7 @@ static int open_socket_connection(const char *host, int port) {
 }
 
 static int open_http_connection(const char *host, int port) {
+#ifndef EMULATOR
   int err;
   connection_type_e connection_type;
   if (CONNECTION_ERROR_NONE != (err = connection_get_type(connection, &connection_type))) {
@@ -191,9 +198,9 @@ static int open_http_connection(const char *host, int port) {
       }
     }
     return proxy_fd;
-  } else {
-    return open_socket_connection(host, port);
   }
+#endif // EMULATOR
+  return open_socket_connection(host, port);
 }
 
 static void add_header(gpointer key, gpointer value, gpointer data) {
