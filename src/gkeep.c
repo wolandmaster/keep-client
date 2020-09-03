@@ -19,9 +19,11 @@
 #include "gpsoauth.h"
 #include "gkeep.h"
 
-gkeep_context *gkeep_initialize(const char *android_id) {
+static gkeep_context *context = NULL;
+
+void gkeep_initialize(const char *android_id) {
   srand(time(NULL)); // NOLINT(cert-msc51-cpp)
-  gkeep_context *context = calloc(1, sizeof(gkeep_context));
+  context = calloc(1, sizeof(gkeep_context));
   context->android_id = strdup(android_id);
   context->email = NULL;
   context->master_token = NULL;
@@ -29,10 +31,9 @@ gkeep_context *gkeep_initialize(const char *android_id) {
   context->oauth_expiry = 0;
   context->version = NULL;
   context->nodes = json_array_new();
-  return context;
 }
 
-void gkeep_terminate(gkeep_context *context) {
+void gkeep_terminate() {
   free(context->android_id);
   if (NULL != context->email) free(context->email);
   if (NULL != context->master_token) free(context->master_token);
@@ -40,9 +41,10 @@ void gkeep_terminate(gkeep_context *context) {
   if (NULL != context->version) free(context->version);
   json_array_unref(context->nodes);
   free(context);
+  context = NULL;
 }
 
-void gkeep_login(gkeep_context *context, const char *email, const char *password) {
+void gkeep_login(const char *email, const char *password) {
   GHashTable *response_data = gpsoauth_perform_master_login(email, password, context->android_id);
   if (NULL != context->email) free(context->email);
   context->email = strdup(email);
@@ -51,9 +53,10 @@ void gkeep_login(gkeep_context *context, const char *email, const char *password
   g_hash_table_destroy(response_data);
   context->oauth_expiry = 0;
   gkeep_oauth_refresh(context);
+  printf("[gkeep_login] finished\n");
 }
 
-void gkeep_oauth_refresh(gkeep_context *context) {
+void gkeep_oauth_refresh() {
   if (NULL == context->oauth_token || context->oauth_expiry < time(NULL)) {
     GHashTable *response_data = gpsoauth_perform_oauth(context->email, context->master_token, context->android_id,
         KEEP_OAUTH_SCOPES, KEEP_OAUTH_APP, KEEP_OAUTH_CLIENT_SIG);
@@ -109,10 +112,10 @@ static void get_timestamp(struct timeval tv, char *timestamp) {
   snprintf(timestamp + time_len, 25, ".%03ldZ", tv.tv_usec / 1000);
 }
 
-static JsonObject *gkeep_post_json(gkeep_context *context, const char *url, JsonObject *json) {
+static JsonObject *gkeep_post_json(const char *url, JsonObject *json) {
   char *body = to_json(json);
   GHashTable *headers = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
-  gkeep_oauth_refresh(context);
+  gkeep_oauth_refresh();
   g_hash_table_insert(headers, "Authorization", g_strdup_printf("OAuth %s", context->oauth_token));
   g_hash_table_insert(headers, "User-Agent", g_strdup(HTTPS_USER_AGENT));
   // g_hash_table_insert(headers, "Accept-Encoding", g_strdup(""));
@@ -146,8 +149,7 @@ static GArray *gkeep_find_nodes(JsonArray *array, const gchar *field, const gcha
   return find.indices;
 }
 
-static void gkeep_merge_node_changes_cb(JsonArray *array, guint index, JsonNode *changed_json_node, gpointer data) {
-  gkeep_context *context = data;
+static void gkeep_merge_node_changes_cb(JsonArray *array, guint index, JsonNode *changed_json_node, gpointer data EINA_UNUSED) {
   JsonObject *changed_node = json_node_get_object(changed_json_node);
   GArray *existing_node_indices = gkeep_find_nodes(context->nodes, "id", json_object_get_string_member(changed_node, "id"));
   for (guint i = 0; i < existing_node_indices->len; i++) {
@@ -163,10 +165,9 @@ static void gkeep_merge_node_changes_cb(JsonArray *array, guint index, JsonNode 
   }
 }
 
-static void gkeep_merge_changes_cb(JsonObject *object, const gchar *member_name, JsonNode *member_node, gpointer data) {
-  gkeep_context *context = data;
+static void gkeep_merge_changes_cb(JsonObject *object, const gchar *member_name, JsonNode *member_node, gpointer data EINA_UNUSED) {
   if (g_strcmp0("nodes", member_name) == 0) {
-    json_array_foreach_element(json_node_get_array(member_node), gkeep_merge_node_changes_cb, context);
+    json_array_foreach_element(json_node_get_array(member_node), gkeep_merge_node_changes_cb, NULL);
   }
 }
 
@@ -176,8 +177,9 @@ static void add_capability(JsonArray *capabilities, char *capability_type) {
   json_array_add_object_element(capabilities, capability);
 }
 
-void gkeep_fetch_changes(gkeep_context *context, JsonArray *nodes, JsonArray *labels) {
+void gkeep_fetch_changes(JsonArray *nodes, JsonArray *labels) {
   gboolean truncated;
+  dlog_print(DLOG_DEBUG, LOG_TAG, "[gkeep_fetch_changes] started");
   do {
     JsonObject *root = json_object_new();
     // nodes
@@ -224,14 +226,15 @@ void gkeep_fetch_changes(gkeep_context *context, JsonArray *nodes, JsonArray *la
       json_object_set_array_member(user_info, "labels", json_array_ref(labels));
       json_object_set_object_member(root, "userInfo", user_info);
     }
-    JsonObject *changes = gkeep_post_json(context, KEEP_API_URL "changes", root);
-    json_object_foreach_member(changes, gkeep_merge_changes_cb, context);
+    JsonObject *changes = gkeep_post_json(KEEP_API_URL "changes", root);
+    json_object_foreach_member(changes, gkeep_merge_changes_cb, NULL);
     if (NULL != context->version) free(context->version);
     context->version = strdup(json_object_get_string_member(changes, "toVersion"));
     truncated = json_object_get_boolean_member(changes, "truncated");
     json_object_unref(changes);
     json_object_unref(root);
   } while (truncated);
+  printf("[gkeep_fetch_changes] finished\n");
 }
 
 static gint gkeep_sort_node_cb(gconstpointer a, gconstpointer b, gpointer data) {
@@ -249,7 +252,15 @@ static gint gkeep_sort_node_cb(gconstpointer a, gconstpointer b, gpointer data) 
   return strcmp(json_object_get_string_member(node_b, "sortValue"), json_object_get_string_member(node_a, "sortValue"));
 }
 
-GArray *gkeep_get_parent_node_indices(gkeep_context *context) {
+JsonObject *gkeep_get_node_by_id(const char *id) {
+  GArray *node_indices = gkeep_find_nodes(context->nodes, "id", id);
+  // TODO: error on zero / more than one match
+  JsonObject *node = json_array_get_object_element(context->nodes, g_array_index(node_indices, guint, 0));
+  g_array_free(node_indices, TRUE);
+  return node;
+}
+
+void gkeep_foreach_parent_node(GKeepForeach func, void *data) {
   GArray *node_indices = g_array_new(FALSE, FALSE, sizeof(guint));
   GArray *list_node_indices = gkeep_find_nodes(context->nodes, "type", "LIST");
   g_array_append_vals(node_indices, list_node_indices->data, list_node_indices->len);
@@ -258,31 +269,19 @@ GArray *gkeep_get_parent_node_indices(gkeep_context *context) {
   g_array_append_vals(node_indices, note_node_indices->data, note_node_indices->len);
   g_array_free(note_node_indices, TRUE);
   g_array_sort_with_data(node_indices, gkeep_sort_node_cb, context->nodes);
-  return node_indices;
-}
-
-void gkeep_foreach_parent_node(gkeep_context *context, GKeepForeach func, void *data) {
-  GArray *node_indices = gkeep_get_parent_node_indices(context);
   for (guint i = 0; i < node_indices->len; i++) {
-    guint node_index = g_array_index(node_indices, guint, i);
-    JsonObject *node = json_array_get_object_element(context->nodes, node_index);
-    (*func)(context, node, node_index, data);
+    JsonObject *node = json_array_get_object_element(context->nodes, g_array_index(node_indices, guint, i));
+    (*func)(node, data);
   }
   g_array_free(node_indices, TRUE);
 }
 
-GArray *gkeep_get_child_node_indices(gkeep_context *context, const char *parent_id) {
+void gkeep_foreach_child_node(const char *parent_id, GKeepForeach func, void *data) {
   GArray *node_indices = gkeep_find_nodes(context->nodes, "parentId", parent_id);
   g_array_sort_with_data(node_indices, gkeep_sort_node_cb, context->nodes);
-  return node_indices;
-}
-
-void gkeep_foreach_child_node(gkeep_context *context, const char *parent_id, GKeepForeach func, void *data) {
-  GArray *node_indices = gkeep_get_child_node_indices(context, parent_id);
   for (guint i = 0; i < node_indices->len; i++) {
-    guint node_index = g_array_index(node_indices, guint, i);
-    JsonObject *node = json_array_get_object_element(context->nodes, node_index);
-    (*func)(context, node, node_index, data);
+    JsonObject *node = json_array_get_object_element(context->nodes, g_array_index(node_indices, guint, i));
+    (*func)(node, data);
   }
   g_array_free(node_indices, TRUE);
 }

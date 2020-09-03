@@ -26,16 +26,15 @@ struct gkeep_find {
   GArray *indices;
 };
 
-typedef void (*GKeepForeach)(gkeep_context *, JsonObject *, guint, void *data);
+typedef void (*GKeepForeach)(JsonObject *, void *data);
 
-gkeep_context *gkeep_initialize(const char *);
-void gkeep_terminate(gkeep_context *);
-void gkeep_login(gkeep_context *, const char *, const char *);
-void gkeep_oauth_refresh(gkeep_context *);
-void gkeep_fetch_changes(gkeep_context *, JsonArray *, JsonArray *);
-GArray *gkeep_get_parent_node_indices(gkeep_context *);
-void gkeep_foreach_parent_node(gkeep_context *, GKeepForeach, void *);
-GArray *gkeep_get_child_node_indices(gkeep_context *, const char *);
-void gkeep_foreach_child_node(gkeep_context *, const char *, GKeepForeach, void *);
+void gkeep_initialize(const char *);
+void gkeep_terminate();
+void gkeep_login(const char *, const char *);
+void gkeep_oauth_refresh();
+void gkeep_fetch_changes(JsonArray *, JsonArray *);
+JsonObject *gkeep_get_node_by_id(const char *id);
+void gkeep_foreach_parent_node(GKeepForeach, void *);
+void gkeep_foreach_child_node(const char *, GKeepForeach, void *);
 
 #endif //KEEPCLIENT_INC_GKEEP_H_
