@@ -56,12 +56,17 @@
             ~/tizen-studio/platforms/tizen-2.3.1/wearable/rootstraps/wearable-2.3.1-device.core/usr/lib/glib-2.0/include
     )
 
-    add_executable(keepclient
+    add_executable(
+            keepclient
             inc/keepclient.h src/keepclient.c
+            inc/log.h src/log.c
+            inc/util.h src/util.c
             inc/base64.h src/base64.c
             inc/https.h src/https.c
             inc/gpsoauth.h src/gpsoauth.c
             inc/gkeep.h src/gkeep.c
-            inc/main_view.h src/view/main_view.c
-            inc/main_event_handler.h src/event_handler/main_event_handler.c
+            inc/parent_view.h src/view/parent_view.c
+            inc/parent_event_handler.h src/event_handler/parent_event_handler.c
+            inc/child_view.h src/view/child_view.c
+            inc/child_event_handler.h src/event_handler/child_event_handler.c\
     )

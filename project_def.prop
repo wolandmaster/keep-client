@@ -5,12 +5,16 @@ profile = wearable-2.3.1
 
 USER_SRCS = \
     src/keepclient.c \
+    src/log.c \
+    src/util.c \
     src/base64.c \
     src/https.c \
     src/gpsoauth.c \
     src/gkeep.c \
-    src/view/main_view.c \
-    src/event_handler/main_event_handler.c
+    src/view/parent_view.c \
+    src/event_handler/parent_event_handler.c \
+    src/view/child_view.c \
+    src/event_handler/child_event_handler.c \
 USER_DEFS =
 USER_INC_DIRS = inc
 USER_OBJS =
