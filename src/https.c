@@ -11,8 +11,8 @@
 #include <ctype.h>
 #include <netdb.h>
 #include <unistd.h>
-#include <dlog.h>
 #include "keepclient.h"
+#include "log.h"
 #include "https.h"
 
 #ifndef EMULATOR
@@ -24,7 +24,7 @@ void http_initialize() {
 #ifndef EMULATOR
   int err;
   if (CONNECTION_ERROR_NONE != (err = connection_create(&connection))) {
-    dlog_print(DLOG_ERROR, LOG_TAG, "[connection_create] failed (%d): %s", err, get_error_message(err));
+    log_print(LOG_ERROR, "connection create failed (%d): %s", err, get_error_message(err));
     return;
   }
 #endif // EMULATOR
@@ -34,7 +34,7 @@ void http_terminate() {
 #ifndef EMULATOR
   int err;
   if (CONNECTION_ERROR_NONE != (err = connection_destroy(connection))) {
-    dlog_print(DLOG_ERROR, LOG_TAG, "[connection_destroy] failed (%d): %s", err, get_error_message(err));
+    log_print(LOG_ERROR, "connection destroy failed (%d): %s", err, get_error_message(err));
   }
   connection = NULL;
 #endif // EMULATOR
@@ -100,7 +100,7 @@ char *http_urlencode(const char *str) {
 static void http_buffer_append(http_buffer *buffer, const char *data, size_t data_len) {
   buffer->data = realloc(buffer->data, buffer->len + data_len + 1);
   if (buffer->data == NULL) {
-    dlog_print(DLOG_ERROR, LOG_TAG, "[http_buffer_append] failed: not enough memory");
+    log_print(LOG_ERROR, "http buffer append failed: not enough memory");
     return;
   }
   memcpy(&(buffer->data[buffer->len]), data, data_len);
@@ -160,7 +160,7 @@ static int open_socket_connection(const char *host, int port) {
   bcopy(server->h_addr, &server_addr.sin_addr.s_addr, server->h_length);
   if (connect(socket_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0) {
     close(socket_fd);
-    dlog_print(DLOG_ERROR, LOG_TAG, "[open_socket_connection] failed to connect to socket: %s:%d", host, port);
+    log_print(LOG_ERROR, "open socket connection failed to connect to socket: %s:%d", host, port);
     return HTTP_ERROR_SOCKET_CONNECT;
   }
   return socket_fd;
@@ -171,13 +171,13 @@ static int open_http_connection(const char *host, int port) {
   int err;
   connection_type_e connection_type;
   if (CONNECTION_ERROR_NONE != (err = connection_get_type(connection, &connection_type))) {
-    dlog_print(DLOG_ERROR, LOG_TAG, "[connection_get_type] failed (%d): %s", err, get_error_message(err));
+    log_print(LOG_ERROR, "get connection type failed (%d): %s", err, get_error_message(err));
     return HTTP_ERROR_GET_CONNECTION_TYPE;
   }
   if (connection_type > CONNECTION_TYPE_WIFI) {
     char *proxy_address;
     if (CONNECTION_ERROR_NONE != (err = connection_get_proxy(connection, CONNECTION_ADDRESS_FAMILY_IPV4, &proxy_address))) {
-      dlog_print(DLOG_ERROR, LOG_TAG, "[connection_get_proxy] failed (%d): %s", err, get_error_message(err));
+      log_print(LOG_ERROR, "get connection proxy failed (%d): %s", err, get_error_message(err));
       return HTTP_ERROR_GET_CONNECTION_PROXY;
     }
     char *proxy_host = strtok(proxy_address, ":");
@@ -306,13 +306,13 @@ http_error https_post(const char *url, GHashTable *headers, const char *body, ht
   g_hash_table_foreach(headers, add_header, &request);
   http_buffer_append(&request, "\r\n", 2);
   http_buffer_append(&request, body, strlen(body));
-  // printf("------------\n| REQUEST  |\n------------\n%s\n", request.data);
+  // log_print(LOG_DEBUG, "------------\n| REQUEST  |\n------------\n%s", request.data);
   if (request.len != SSL_write_all(ssl, &request)) {
     ret = HTTP_ERROR_SEND;
     goto request_data_free;
   }
   char *raw_response = SSL_read_all(ssl);
-  // printf("------------\n| RESPONSE |\n------------\n%s\n===================================================\n\n\n", raw_response);
+  // log_print(LOG_DEBUG, "------------\n| RESPONSE |\n------------\n%s\n===================================================\n\n", raw_response);
   *response = parse_http_response(raw_response);
   free(raw_response);
 request_data_free:

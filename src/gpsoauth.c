@@ -9,9 +9,9 @@
 
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
-#include <dlog.h>
 #include <glib.h>
 #include "keepclient.h"
+#include "log.h"
 #include "gpsoauth.h"
 #include "base64.h"
 #include "https.h"
@@ -52,7 +52,7 @@ static unsigned char *encrypt_credential(const char *email, const char *password
   memcpy(credential + email_len + 1, password, password_len);
   unsigned char *encrypted_credential = (unsigned char *) calloc(RSA_size(rsa), sizeof(unsigned char));
   if (-1 == (*out_len = RSA_public_encrypt((int) sizeof(credential), credential, encrypted_credential, rsa, RSA_PKCS1_OAEP_PADDING))) {
-    dlog_print(DLOG_ERROR, LOG_TAG, "[encrypt_credential] RSA_public_encrypt failed");
+    log_print(LOG_ERROR, "encrypt credential RSA_public_encrypt failed");
     free(encrypted_credential);
     return NULL;
   }
@@ -101,7 +101,7 @@ static GHashTable *perform_auth_request(const char *body) {
   http_response *response;
   GHashTable *response_data = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
   if (HTTP_ERROR_NONE != (err = https_post(GOOGLE_PLAY_SERVICES_AUTH_URL, headers, body, &response))) {
-    dlog_print(DLOG_ERROR, LOG_TAG, "[gpsoath_perform_master_login] failed (%d): %s", err, http_error_message(err));
+    log_print(LOG_ERROR, "perform google play services auth request failed (%d): %s", err, http_error_message(err));
     g_hash_table_insert(response_data, g_strdup(HTTPS_ERROR_KEY), g_strdup(http_error_message(err)));
   } else {
     parse_auth_response(response->body, response_data);
