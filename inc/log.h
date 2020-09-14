@@ -3,6 +3,11 @@
 
 #define MAX_LOG_LINE_LENGTH 1024
 
+#define ANSI_COLOR_RED    "\x1b[31m"
+#define ANSI_COLOR_YELLOW "\x1b[33m"
+#define ANSI_COLOR_GRAY   "\x1b[90m"
+#define ANSI_COLOR_RESET  "\x1b[0m"
+
 typedef enum {
   LOG_UNKNOWN = 0, /**< Keep this always at the start */
   LOG_DEFAULT,     /**< Default */

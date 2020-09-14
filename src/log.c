@@ -35,6 +35,20 @@ static const char *level2str(log_level level) {
       return "unknown";
   }
 }
+
+static const char *level2color(log_level level) {
+  switch (level) {
+    case LOG_ERROR:
+    case LOG_FATAL:
+      return ANSI_COLOR_RED;
+    case LOG_WARN:
+      return ANSI_COLOR_YELLOW;
+    case LOG_DEBUG:
+      return ANSI_COLOR_GRAY;
+    default:
+      return "";
+  }
+}
 #endif // EMULATOR
 
 int log_print(log_level level, const char *fmt, ...) {
@@ -46,9 +60,10 @@ int log_print(log_level level, const char *fmt, ...) {
 #else
   char format[MAX_LOG_LINE_LENGTH];
   const char *level_str = level2str(level);
+  const char *level_color = level2color(level);
   int padding = (int) ((7 - strlen(level_str)) / 2);
-  snprintf(format, sizeof(format), "[%*s%s%*s] %s\n",
-      padding + 1 - (strlen(level_str) % 2), "", level_str, padding, "", fmt);
+  snprintf(format, sizeof(format), "[%*s%s%s%s%*s] %s\n", padding, "", level_color, level_str,
+      strcmp(level_color, "") == 0 ? "" : ANSI_COLOR_RESET, padding + 1 - (int) (strlen(level_str) % 2), "", fmt);
   ret = vprintf(format, ap);
 #endif // EMULATOR
   va_end (ap);
