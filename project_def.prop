@@ -7,6 +7,7 @@ USER_SRCS = \
     src/keepclient.c \
     src/log.c \
     src/util.c \
+    src/data.c \
     src/base64.c \
     src/https.c \
     src/gpsoauth.c \

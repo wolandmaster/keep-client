@@ -61,6 +61,7 @@
             inc/keepclient.h src/keepclient.c
             inc/log.h src/log.c
             inc/util.h src/util.c
+            inc/data.h src/data.c
             inc/base64.h src/base64.c
             inc/https.h src/https.c
             inc/gpsoauth.h src/gpsoauth.c
@@ -68,5 +69,5 @@
             inc/parent_view.h src/view/parent_view.c
             inc/parent_event_handler.h src/event_handler/parent_event_handler.c
             inc/child_view.h src/view/child_view.c
-            inc/child_event_handler.h src/event_handler/child_event_handler.c\
+            inc/child_event_handler.h src/event_handler/child_event_handler.c
     )
