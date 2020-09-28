@@ -1,6 +1,11 @@
 #ifndef KEEPCLIENT_INC_LOG_H_
 #define KEEPCLIENT_INC_LOG_H_
 
+#ifdef  LOG_TAG
+#undef  LOG_TAG
+#endif
+#define LOG_TAG "keepclient"
+
 #define MAX_LOG_LINE_LENGTH 1024
 
 #define ANSI_COLOR_RED    "\x1b[31m"
